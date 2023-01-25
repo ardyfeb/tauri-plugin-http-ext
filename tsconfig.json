@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ES2015", "DOM"],
+    "strict": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "baseUrl": "./api",
+    "declaration": true,
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "rootDir": "./api",
+  },
+  "include": ["api"],
+}
