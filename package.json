@@ -3,10 +3,11 @@
   "version": "0.0.1",
   "author": "Ardy Febriansyah <root@ardyfeb.dev>",
   "description": "",
-  "main": "index.js", 
-  "types": "index.d.ts",
+  "main": "dist/index.js", 
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
   "scripts": {
-    "build": "tsc -p tsconfig.json && cp package.json ./dist"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.0.0",
