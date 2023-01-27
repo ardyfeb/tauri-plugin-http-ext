@@ -32,8 +32,6 @@ async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
         }
     }
 
-    println!("builder: {:#?}", &builder);
-
     let result = client.execute(builder.build()?).await?;
     let response = async {
         let status = result.status().as_u16();
