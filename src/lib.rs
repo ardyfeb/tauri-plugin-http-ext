@@ -2,18 +2,17 @@ mod error;
 
 use std::collections::HashMap;
 
-use tauri::{Manager, Runtime, State};
-use tauri::plugin::{Builder, TauriPlugin};
-use reqwest::{Client, Certificate, Identity, header::HeaderMap};
+use reqwest::{header::HeaderMap, Certificate, Client, Identity};
 use serde::{Deserialize, Serialize};
-use serde_repr::Deserialize_repr;
 use serde_json::Value as JsonValue;
+use serde_repr::Deserialize_repr;
+use tauri::plugin::{Builder, TauriPlugin};
+use tauri::{Manager, Runtime, State};
 
 use error::Result;
 
 #[tauri::command]
 async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
-    println!("request: {:#?}", &request);
     let method = request.method.parse()?;
     let mut builder = client.request(method, &request.url);
 
@@ -41,16 +40,23 @@ async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
 
         let mut headers: HashMap<String, String> = HashMap::new();
         for (key, value) in result.headers() {
-            headers.insert(key.to_string(), String::from_utf8(value.as_bytes().to_vec())?);
+            headers.insert(
+                key.to_string(),
+                String::from_utf8(value.as_bytes().to_vec())?,
+            );
         }
 
         let body: JsonValue = match request.response_type.unwrap_or(ResponseType::Json) {
             ResponseType::Text => JsonValue::String(result.text().await?),
             ResponseType::Json => result.json().await?,
-            ResponseType::Binary => serde_json::to_value(&*result.bytes().await?)?
+            ResponseType::Binary => serde_json::to_value(&*result.bytes().await?)?,
         };
 
-        Ok(Response { status, headers, body })
+        Ok(Response {
+            status,
+            headers,
+            body,
+        })
     };
 
     Ok((response.await as Result<Response>)?)
@@ -59,25 +65,21 @@ async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
 pub fn init<R: Runtime>(config: ClientConfig) -> TauriPlugin<R> {
     Builder::new("mtls")
         .invoke_handler(tauri::generate_handler![send])
-        .setup(
-            move |app| {
-                app.manage(
-                    {
-                        let certificate = Certificate::from_pem(config.ca).unwrap();
-                        let identity = Identity::from_pem(config.cert).unwrap();
-                        let client = Client::builder()
-                            .add_root_certificate(certificate)
-                            .identity(identity)
-                            .build()
-                            .unwrap();
+        .setup(move |app| {
+            app.manage({
+                let certificate = Certificate::from_pem(config.ca).unwrap();
+                let identity = Identity::from_pem(config.cert).unwrap();
+                let client = Client::builder()
+                    .add_root_certificate(certificate)
+                    .identity(identity)
+                    .build()
+                    .unwrap();
 
-                        client
-                    }
-                );
+                client
+            });
 
-                Ok(())
-            }
-        )
+            Ok(())
+        })
         .build()
 }
 
@@ -96,7 +98,7 @@ struct Request {
 struct Response {
     pub status: u16,
     pub headers: HashMap<String, String>,
-    pub body: JsonValue
+    pub body: JsonValue,
 }
 
 #[derive(Debug, Deserialize)]
@@ -104,7 +106,7 @@ struct Response {
 enum Body {
     Form,
     Json(JsonValue),
-    Text(String)
+    Text(String),
 }
 
 #[derive(Debug, Deserialize_repr)]
@@ -112,7 +114,7 @@ enum Body {
 enum ResponseType {
     Json = 1,
     Text,
-    Binary
+    Binary,
 }
 
 #[derive(Debug)]
