@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-http-ext"
-version = "0.0.1"
+version = "0.1.0"
 description = ""
 edition = "2021"
 rust-version = "1.59"

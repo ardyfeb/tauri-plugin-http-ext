@@ -1,6 +1,6 @@
 {
   "name": "tauri-plugin-http-ext",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Ardy Febriansyah <root@ardyfeb.dev>",
   "description": "",
   "main": "dist/index.js", 
