@@ -66,7 +66,8 @@ pub fn init<R: Runtime>(config: ClientConfig) -> TauriPlugin<R> {
                         let certificate = Certificate::from_pem(config.ca).unwrap();
                         let identity = Identity::from_pem(config.cert).unwrap();
                         let client = Client::builder()
-                            œ
+                            .add_root_certificate(certificate)
+                            .identity(identity)
                             .build()
                             .unwrap();
 
