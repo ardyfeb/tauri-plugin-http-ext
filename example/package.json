@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^1.2.0",
-    "axios": "^1.2.3"
+    "axios": "^1.2.3",
+    "tauri-plugin-http-ext": "file:../dist"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^1.2.2",

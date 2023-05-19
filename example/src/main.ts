@@ -4,6 +4,6 @@ import { axiosAdapter } from 'tauri-plugin-http-ext/adapter/axios'
 const client = axios.create({ adapter: axiosAdapter })
 
 client
-  .get('https://mtls.ardyfeb.dev')
+  .get('https://jsonplaceholder.typicode.com/todos/1', { headers: { 'User-Agent': 'Tauri' } })
   .then(console.log)
   .catch(console.error)

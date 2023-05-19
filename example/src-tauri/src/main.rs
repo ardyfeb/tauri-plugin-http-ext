@@ -3,18 +3,15 @@
     windows_subsystem = "windows"
 )]
 
+use tauri_plugin_http_ext as http_ext;
+
 fn main() {
-    // let config = tauri_plugin_mtls::ClientConfig {
-    //     ca: include_bytes!("/Users/ardyfeb/Documents/certs/ardyfeb.dev/ardyfeb.dev.crt"),
-    //     cert: include_bytes!("/Users/ardyfeb/Documents/certs/ardyfeb.dev/ardyfeb.dev.1.pem"),
-    // };
-    let config = tauri_plugin_mtls::ClientConfig {
-        ca: include_bytes!("/Users/ardyfeb/Documents/certs/local/client_0.crt"),
-        cert: include_bytes!("/Users/ardyfeb/Documents/certs/local/client_0.pem"),
+    let config = tauri_plugin_http_ext::ClientConfig {
+        tls: None
     };
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_mtls::init(config))
+        .plugin(http_ext::init(config))
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

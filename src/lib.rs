@@ -2,6 +2,7 @@ mod error;
 
 use std::collections::HashMap;
 
+use http::Method;
 use reqwest::{header::HeaderMap, Certificate, Client, Identity};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
@@ -13,7 +14,7 @@ use error::Result;
 
 #[tauri::command]
 async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
-    let method = request.method.parse()?;
+    let method = Method::from_bytes(request.method.to_uppercase().as_bytes())?;
     let mut builder = client.request(method, &request.url);
 
     if let Some(query) = request.query {
@@ -32,16 +33,13 @@ async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
         }
     }
 
-    let result = client.execute(builder.build()?).await?;
+    let result = builder.send().await?;
     let response = async {
         let status = result.status().as_u16();
 
         let mut headers: HashMap<String, String> = HashMap::new();
         for (key, value) in result.headers() {
-            headers.insert(
-                key.to_string(),
-                String::from_utf8(value.as_bytes().to_vec())?,
-            );
+            headers.insert(key.to_string(), String::from_utf8(value.as_bytes().to_vec())?);
         }
 
         let body: JsonValue = match request.response_type.unwrap_or(ResponseType::Json) {
@@ -64,17 +62,20 @@ pub fn init<R: Runtime>(config: ClientConfig) -> TauriPlugin<R> {
     Builder::new("mtls")
         .invoke_handler(tauri::generate_handler![send])
         .setup(move |app| {
-            app.manage({
-                let certificate = Certificate::from_pem(config.ca).unwrap();
-                let identity = Identity::from_pem(config.cert).unwrap();
+            if let Some(tls) = config.tls {
+                let certificate = Certificate::from_pem(tls.ca).unwrap();
+                let identity = Identity::from_pem(tls.cert).unwrap();
                 let client = Client::builder()
                     .add_root_certificate(certificate)
                     .identity(identity)
+                    .use_rustls_tls()
                     .build()
                     .unwrap();
 
-                client
-            });
+                app.manage(client);
+            } else {
+                app.manage(Client::builder().build().unwrap());
+            }
 
             Ok(())
         })
@@ -117,6 +118,11 @@ enum ResponseType {
 
 #[derive(Debug)]
 pub struct ClientConfig {
+    pub tls: Option<ClientConfigTls>,
+}
+
+#[derive(Debug)]
+pub struct ClientConfigTls {
     pub ca: &'static [u8],
     pub cert: &'static [u8],
 }
