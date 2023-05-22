@@ -10,8 +10,8 @@ export function axiosAdapter(config: AxiosRequestConfig): Promise<AxiosResponse<
         const response = await Client.request(
           {
             method: config.method!,
-            url: config.url!,
-            query: config.params,
+            url: buildUrl(config),
+            query: castParams(config),
             headers: config.headers,
             body: getBody(config),
             responseType: getResponseType(config)
@@ -59,4 +59,24 @@ function getResponseType(config: AxiosRequestConfig): ResponseType {
     default:
       return ResponseType.Text
   }
+}
+
+function buildUrl(config: AxiosRequestConfig): string {
+  if (config.baseURL) {
+    return config.baseURL + config.url
+  }
+
+  return config.url!
+}
+
+function castParams(config: AxiosRequestConfig): Record<string, string> {
+  const params = config.params || {}
+
+  for (const key in params) {
+    if (typeof params[key] === 'number') {
+      params[key] = params[key].toString()
+    }
+  }
+
+  return params
 }
