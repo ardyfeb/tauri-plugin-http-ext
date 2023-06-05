@@ -3,7 +3,7 @@ mod error;
 use std::collections::HashMap;
 
 use http::Method;
-use reqwest::{header::HeaderMap, Certificate, Client, Identity};
+use reqwest::{header::HeaderMap, Certificate, Client};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serde_repr::Deserialize_repr;
