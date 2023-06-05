@@ -63,11 +63,10 @@ pub fn init<R: Runtime>(config: ClientConfig) -> TauriPlugin<R> {
         .invoke_handler(tauri::generate_handler![send])
         .setup(move |app| {
             if let Some(tls) = config.tls {
-                let certificate = Certificate::from_pem(tls.ca).unwrap();
-                let identity = Identity::from_pem(tls.cert).unwrap();
+                let certificate = Certificate::from_pem(tls.cert).unwrap();
                 let client = Client::builder()
+                    // .tls_built_in_root_certs(false)
                     .add_root_certificate(certificate)
-                    .identity(identity)
                     .use_rustls_tls()
                     .build()
                     .unwrap();
@@ -123,6 +122,5 @@ pub struct ClientConfig {
 
 #[derive(Debug)]
 pub struct ClientConfigTls {
-    pub ca: &'static [u8],
     pub cert: &'static [u8],
 }
