@@ -3,18 +3,25 @@ mod error;
 use std::collections::HashMap;
 
 use http::Method;
-use reqwest::{header::HeaderMap, Certificate, Client};
+use reqwest::{header::HeaderMap, Certificate, Client, Identity};
 use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use serde_repr::Deserialize_repr;
-use tauri::plugin::{Builder, TauriPlugin};
-use tauri::{Manager, Runtime, State};
+use tauri::plugin::{Builder as PluginBuilder, TauriPlugin};
+use tauri::{Manager, Runtime, State as TauriState, async_runtime::RwLock};
 
 use error::Result;
 
 #[tauri::command]
-async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
+async fn send(state: TauriState<'_, State>, client_name: String, request: Request) -> Result<Response> {
+    println!("{:?}", client_name);
+    println!("{:?}", request);
+    
+    let state = state.read().await;
+    let client = state.get(&client_name).unwrap();
+
     let method = Method::from_bytes(request.method.to_uppercase().as_bytes())?;
+
     let mut builder = client.request(method, &request.url);
 
     if let Some(query) = request.query {
@@ -58,27 +65,79 @@ async fn send(client: State<'_, Client>, request: Request) -> Result<Response> {
     Ok((response.await as Result<Response>)?)
 }
 
-pub fn init<R: Runtime>(config: ClientConfig) -> TauriPlugin<R> {
-    Builder::new("mtls")
-        .invoke_handler(tauri::generate_handler![send])
-        .setup(move |app| {
-            if let Some(tls) = config.tls {
-                let certificate = Certificate::from_pem(tls.cert).unwrap();
-                let client = Client::builder()
-                    // .tls_built_in_root_certs(false)
-                    .add_root_certificate(certificate)
-                    .use_rustls_tls()
-                    .build()
-                    .unwrap();
+pub type Clients = HashMap<String, Client>;
+pub type State = RwLock<Clients>;
 
-                app.manage(client);
-            } else {
-                app.manage(Client::builder().build().unwrap());
+pub struct Builder {
+    clients: HashMap<String, Client>,
+}
+
+impl Builder {
+    pub fn new() -> Self {
+        Self {
+            clients: HashMap::new(),
+        }
+    }
+
+    pub fn add_client(mut self, name: &str, config: ClientConfig) -> Self {
+        let mut client = Client::builder();
+
+        if let Some(tls) = config.tls {
+            client = client
+                // .tls_built_in_root_certs(false)
+                .use_rustls_tls()
+                .add_root_certificate(Certificate::from_pem(tls.cert).unwrap());
+
+            if let Some(key) = tls.key {
+                client = client.identity(Identity::from_pem(key).unwrap());
             }
+        }
 
-            Ok(())
-        })
-        .build()
+        self.clients.insert(name.to_string(), client.build().unwrap());
+        self
+    }
+
+    pub fn build<R: Runtime>(self) -> TauriPlugin<R> {
+        let plugin = PluginBuilder::new("mtls")
+            .invoke_handler(tauri::generate_handler![send])
+            .setup(
+                move |app| {
+                    app.manage(RwLock::new(self.clients.clone())); Ok(())
+                }
+            )
+            .build();
+
+        plugin
+    }
+}
+
+#[derive(Debug)]
+pub struct ClientConfig {
+    pub tls: Option<ClientTlsConfig>,
+}
+
+#[derive(Debug)]
+pub struct ClientTlsConfig {
+    pub cert: &'static [u8],
+    pub key: Option<&'static [u8]>,
+}
+
+impl ClientConfig {
+    pub fn new() -> Self {
+        Self {
+            tls: None,
+        }
+    }
+
+    pub fn tls(mut self, cert: &'static [u8], key: Option<&'static [u8]>) -> Self {
+        let tls = ClientTlsConfig {
+            cert,
+            key,
+        };
+
+        self.tls = Some(tls);
+        self
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -113,14 +172,4 @@ enum ResponseType {
     Json = 1,
     Text,
     Binary,
-}
-
-#[derive(Debug)]
-pub struct ClientConfig {
-    pub tls: Option<ClientConfigTls>,
-}
-
-#[derive(Debug)]
-pub struct ClientConfigTls {
-    pub cert: &'static [u8],
 }

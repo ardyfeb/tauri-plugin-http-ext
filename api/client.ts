@@ -41,30 +41,34 @@ export class Body {
   static form = (value: any): Body => new Body('Form', value)
 }
 
-export namespace Client {
-  export async function request<T>(options: RequestOptions): Promise<Response<T>> {
-    return invoke<Response<T>>('plugin:mtls|send', { request: options }).then(
+export function getClient(clientName: string) {
+  const request = async <T>(options: RequestOptions): Promise<Response<T>> => {
+    return await invoke<Response<T>>('plugin:mtls|send', { clientName, request: options }).then(
       response => ({ ...response, ok: response.status >= 200 && response.status < 300 })
     )
   }
 
-  export function get<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
-    return request<T>({ url, method: 'GET', ...options, })
-  }
-
-  export function post<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
-    return request<T>({ url, method: 'POST', ...options, })
-  }
-
-  export function put<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
-    return request<T>({ url, method: 'PUT', ...options, })
-  }
-
-  export function patch<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
-    return request<T>({ url, method: 'PATCH', ...options, })
-  }
-
-  export function del<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
-    return request<T>({ url, method: 'DELETE', ...options, })
+  return {
+    request,
+  
+    get<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
+      return request<T>({ url, method: 'GET', ...options, })
+    },
+  
+    post<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
+      return request<T>({ url, method: 'POST', ...options, })
+    },
+  
+    put<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
+      return request<T>({ url, method: 'PUT', ...options, })
+    },
+  
+    patch<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
+      return request<T>({ url, method: 'PATCH', ...options, })
+    },
+  
+    del<T>(url: string, options: Omit<RequestOptions, 'method' | 'url'>): Promise<Response<T>> {
+      return request<T>({ url, method: 'DELETE', ...options, })
+    },
   }
 }
