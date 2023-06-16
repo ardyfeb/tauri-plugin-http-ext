@@ -14,9 +14,6 @@ use error::Result;
 
 #[tauri::command]
 async fn send(state: TauriState<'_, State>, client_name: String, request: Request) -> Result<Response> {
-    println!("{:?}", client_name);
-    println!("{:?}", request);
-    
     let state = state.read().await;
     let client = state.get(&client_name).unwrap();
 
